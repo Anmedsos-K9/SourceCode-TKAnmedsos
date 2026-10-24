@@ -244,3 +244,5 @@ __marimo__/
 # File sistem operasi
 .DS_Store
 Thumbs.db
+
+.vscode/
