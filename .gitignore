@@ -1,4 +1,4 @@
-# Byte-compiled / optimized / DLL files
+g# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class
@@ -218,3 +218,31 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Secrets and credentials
+.env.*
+!.env.example
+
+# Kredensial 
+/secrets/
+/credentials.json
+/client_secret*.json
+/token.json
+
+# Dataset hasil pengumpulan: tetap lokal
+/data/raw/*
+!/data/raw/.gitkeep
+/data/processed/*
+!/data/processed/.gitkeep
+
+# Catatan eksekusi dan progres pengambilan
+/logs/*
+!/logs/.gitkeep
+/checkpoints/*
+!/checkpoints/.gitkeep
+
+# File sistem operasi
+.DS_Store
+Thumbs.db
+
+.vscode/
