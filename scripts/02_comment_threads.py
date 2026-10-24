@@ -1,6 +1,8 @@
 import json
 import os
 from datetime import datetime, timezone
+
+import time
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -10,6 +12,11 @@ from googleapiclient.errors import HttpError
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
+# Ubah sesuai kebutuhan / Buat None utk ngambil semua hal komen
+MAX_PAGES = None
+
+# Delay .
+REQUEST_DELAY_SECONDS = 0.5
 
 def main():
     load_dotenv(PROJECT_ROOT / ".env")
@@ -21,7 +28,19 @@ def main():
         print("Gagal: isi YOUTUBE_API_KEY dan YOUTUBE_VIDEO_ID dalam .env.")
         return 1
 
+    # Setiap eksekusi memiliki folder tersendiri agar hasil sebelumnya terjaga.
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S_%fZ")
+    output_directory = (
+        PROJECT_ROOT / "data" / "raw" / f"comments_{video_id}_{run_id}"
+    )
+
+    page_token = None
+    page_number = 1
+    total_comments = 0
+    
     try:
+        output_directory.mkdir(parents=True, exist_ok=True)
+
         youtube = build(
             "youtube",
             "v3",
@@ -29,84 +48,84 @@ def main():
             cache_discovery=False,
         )
 
-        response = youtube.commentThreads().list(
-            part="snippet",
-            videoId=video_id,
-            maxResults=100,
-            order="time",
-            textFormat="plainText",
-        ).execute()
+        while True:
+            print(f"\nMengambil halaman {page_number}...")
+            parameters = {
+                "part": "snippet",
+                "videoId": video_id,
+                "maxResults": 100,
+                "order": "time",
+                "textFormat": "plainText",
+            }
+
+            if page_token:
+                parameters["pageToken"] = page_token
+
+            response = youtube.commentThreads().list(
+                **parameters
+                ).execute()
+
+            threads = response.get("items", [])
+
+            output = {
+                "video_id": video_id,
+                "collected_at": datetime.now(timezone.utc).isoformat(),
+                "page_number": page_number,
+                "request_parameters": parameters,
+                "response": response,
+            }
+
+            output_path = (
+                output_directory / f"page_{page_number:04d}.json"
+            )
+
+            with output_path.open("w", encoding="utf-8") as file:
+                json.dump(output, file, ensure_ascii=False, indent=2)
+
+            total_comments += len(threads)
+
+            print(
+                f"Halaman {page_number} tersimpan: "
+                f"{len(threads)} komentar utama. "
+                f"Total entri: {total_comments}."
+            )
+
+            next_page_token = response.get("nextPageToken")
+
+            if not next_page_token:
+                print("\nSelesai: API tidak memberikan halaman berikutnya.")
+                break
+
+            if MAX_PAGES is not None and page_number >= MAX_PAGES:
+                print(f"\nBerhenti pada batas uji coba: {MAX_PAGES} halaman.")
+                print("Masih ada halaman berikutnya yang belum diambil.")
+                break
+
+            # Token respons digunakan untuk permintaan berikutnya.
+            page_token = next_page_token
+            page_number += 1
+
+            time.sleep(REQUEST_DELAY_SECONDS)
 
     except HttpError as error:
-        # Hindari mencetak URL permintaan yang dapat memuat API key.
-        print(f"Permintaan API gagal. Status HTTP: {error.resp.status}")
-        print(
-            "Periksa konfigurasi API, kuota, akses video, "
-            "dan apakah komentar video diaktifkan."
-        )
+        print(f"\nPermintaan API gagal. Status HTTP: {error.resp.status}")
+        print("Halaman yang sudah berhasil disimpan tetap tersedia.")
+        print(f"Folder hasil: {output_directory}")
         return 1
 
     except OSError:
-        print("Koneksi gagal. Periksa jaringan internet.")
+        print("\nTerjadi masalah koneksi atau penyimpanan.")
+        print(f"Periksa hasil yang sudah tersimpan di: {output_directory}")
         return 1
 
-    threads = response.get("items", [])
-    collected_at = datetime.now(timezone.utc).isoformat()
+    except KeyboardInterrupt:
+        print("\nProses dihentikan oleh pengguna.")
+        print(f"Periksa hasil yang sudah tersimpan di: {output_directory}")
+        return 130
 
-    # Menyimpan respons API, termasuk token halaman berikutnya jika tersedia.
-    output = {
-        "video_id": video_id,
-        "collected_at": collected_at,
-        "request_parameters": {
-            "part": "snippet",
-            "maxResults": 100,
-            "order": "time",
-            "textFormat": "plainText",
-        },
-        "response": response,
-    }
-
-    output_directory = PROJECT_ROOT / "data" / "raw"
-    output_path = (
-        output_directory / f"comment_threads_{video_id}_page_001.json"
-    )
-
-    try:
-        output_directory.mkdir(parents=True, exist_ok=True)
-
-        with output_path.open("w", encoding="utf-8") as file:
-            json.dump(output, file, ensure_ascii=False, indent=2)
-
-    except OSError:
-        print("Data berhasil diambil, tetapi gagal disimpan.")
-        print("Periksa izin akses dan ruang penyimpanan.")
-        return 1
-
-    print(f"Komentar utama diperoleh: {len(threads)}")
-    print(f"Disimpan ke: {output_path}")
-
-    # Menampilkan maksimal tiga contoh untuk memeriksa hasil.
-    for number, thread in enumerate(threads[:3], start=1):
-        thread_snippet = thread["snippet"]
-        comment = thread_snippet["topLevelComment"]
-        snippet = comment["snippet"]
-
-        text = snippet.get("textDisplay", "")
-        preview = " ".join(text.split())
-        if len(preview) > 250:
-            preview = preview[:250] + "..."
-
-        print(f"\nContoh {number}")
-        print(f"ID komentar   : {comment['id']}")
-        print(f"Dipublikasikan: {snippet.get('publishedAt')}")
-        print(f"Jumlah suka   : {snippet.get('likeCount', 0)}")
-        print(f"Jumlah balasan: {thread_snippet.get('totalReplyCount', 0)}")
-        print(f"Teks          : {preview}")
-
-    if response.get("nextPageToken"):
-        print("\nHalaman berikutnya tersedia, tetapi belum diambil.")
-    else:
-        print("\nAPI tidak memberikan halaman berikutnya.")
+    print(f"\nJumlah halaman tersimpan: {page_number}")
+    print(f"Jumlah entri komentar utama: {total_comments}")
+    print(f"Folder hasil: {output_directory}")
 
     return 0
 
