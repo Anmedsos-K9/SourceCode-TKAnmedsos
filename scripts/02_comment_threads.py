@@ -13,7 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # Ubah sesuai kebutuhan / Buat None utk ngambil semua hal komen
 MAX_PAGES = None
-RESUME = True  # False untuk memulai pengambilan baru.
+RESUME = True # False untuk memulai pengambilan baru.
 REQUEST_DELAY_SECONDS = 0.5 # Delay
 MAX_RETRIES = 3
 
