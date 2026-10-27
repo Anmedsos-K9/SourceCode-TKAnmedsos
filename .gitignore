@@ -234,6 +234,8 @@ __marimo__/
 !/data/raw/.gitkeep
 /data/processed/*
 !/data/processed/.gitkeep
+/data/interim/*
+!/data/interim/.gitkeep
 
 # Catatan eksekusi dan progres pengambilan
 /logs/*
