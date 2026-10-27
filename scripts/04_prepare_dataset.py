@@ -433,7 +433,7 @@ def prepare_dataset(args):
     output_directory = (
         Path(args.output).resolve()
         if args.output
-        else Path("data/processed").resolve()
+        else Path("data/interim").resolve()
         / f"prepared_{args.video_id}_{run_id}"
     )
 
@@ -461,7 +461,7 @@ def prepare_dataset(args):
         "reply_session": reply_directory.name,
         "main_pages": len(main_pages),
         "reply_pages": reply_page_count,
-        "parents_with_replies_processed": len(reply_groups),
+        "parents_with_replies_interim": len(reply_groups),
         "main_comments": main_summary,
         "replies": reply_summary,
         "total_unique_comments": len(main_table) + len(reply_table),
