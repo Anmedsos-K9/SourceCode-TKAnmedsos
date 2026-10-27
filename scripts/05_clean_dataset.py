@@ -35,6 +35,10 @@ try:
 except ImportError:
     available_languages = tokenize = zipf_frequency = None
 try:
+    from vaderSentiment import vaderSentiment as vader
+except ImportError:
+    vader = None
+try:
     from lingua import Language, LanguageDetectorBuilder
 except ImportError:
     Language = LanguageDetectorBuilder = None
@@ -43,6 +47,7 @@ REQUIRED_PACKAGES = {
     "emoji": "emoji", "ftfy": "ftfy", "phonenumbers": "phonenumbers",
     "tldextract": "tldextract", "URLExtract": "urlextract",
     "zipf_frequency": "wordfreq", "LanguageDetectorBuilder": "lingua-language-detector",
+    "vader": "vaderSentiment",
 }
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -68,7 +73,7 @@ REQUIRED_INTERIM_FILES = [
 
 VIDEO_CONTEXT_FILE = INTERIM_ROOT / "video_context.json"
 
-EMOJI_NAME_LANGUAGE = "en"                                                
+EMOJI_NAME_LANGUAGE = "en"   
 
 SKIN_TONE_MODIFIERS = re.compile("[\U0001F3FB-\U0001F3FF]")
 
@@ -76,8 +81,7 @@ MIN_LETTERS_FOR_LANGUAGE = 3
 LANGUAGE_REVIEW_RATIO = 1.5
 LATIN_SHARE_MIN = 0.95
 PRIOR_MIN_TOKENS = 5
-WORD_MODEL_REVIEW_MARGIN = 1.0                                            
-                                                                
+WORD_MODEL_REVIEW_MARGIN = 1.0   
 LINGUA_TO_WORDFREQ_CODE = {"tl": "fil"}
 
 SPAM_STRONG_PATTERNS = {
@@ -191,7 +195,6 @@ PERSONA_ROLE_WORDS = [
 ]
 PERSONA_JOKE_ROLES = ["host", "guest", "interviewer", "interviewee", "presenter",
                       "speaker", "panelist", "this guy", "the guy", "this dude"]
-                                                                             
 PERSONA_REPLACEMENT_JOKE = r"\breplac\w* (the |this )?({subjects})\b"
 PERSONA_CREDENTIAL = re.compile(
     r"\b(engineers?|programmers?|developers?|journalists?|pr|career|degree|background|"
@@ -224,7 +227,6 @@ REPLACEMENT_STRONG = [
     r"\b(cheaper|faster|better) than (hiring|paying|contracting|employing) \w+",
     r"\bautomat(e|ed|es|ing|ion) (\w+ ){0,3}(jobs?|workers|roles|positions)\b",
 ]
-                                                                               
 REPLACEMENT_WEAK = [
     r"\b(obsolete|redundan\w*|displac\w*)\b",
     r"\b(white|blue)[- ]collar\b", r"\bworkforce\b",
@@ -287,16 +289,13 @@ WORK_OBJECT = (r"(jobs?|tasks?|my job|my work|projects?|code|coding|programming|
                r"emails?|spreadsheets?|analysis|translation|invoices?|diagnos\w*|legal|"
                r"accounting|customer service|support tickets?|clients?|customers?|production)")
 CAPABILITY_STRONG = [
-                                        
     r"\b(can|can't|cant|cannot|could|couldn't|will|won't|able to|unable to|capable of|incapable of|"
     r"good enough to|not good enough to|smart enough to|reliable enough to) (\w+ ){0,3}"
     r"(do|perform|handle|complete|automate|take over) (\w+ ){0,3}" + WORK_OBJECT + r"\b",
-                                   
     r"\b(better|worse|faster|slower|cheaper|more accurate|less accurate|more reliable|"
     r"less reliable) than (a |an |the |most |any |average |real |human |junior |senior )?" + HUMAN + r"\b",
     r"\b(as good as|as bad as|outperforms?|replaces?) (a |an |the |most |any |average |real |human )?"
-    r"(intern|junior|employee|worker|expert|professional|doctor|lawyer|programmer|developer|engineer)s?\b",
-                                                   
+    r"(intern|junior|employee|worker|expert|professional|doctor|lawyer|programmer|developer|engineer)s?\b", 
     r"\b" + HUMAN + r" (\w+ ){0,2}(also )?(hallucinate|make (\w+ )?mistakes|make things up|get (it|things) wrong)\b",
     r"\b(do|does|did|doing) (the )?(work|job) of (\w+ ){0,2}" + HUMAN + r"\b",
 ]
@@ -320,7 +319,6 @@ HASHTAG_PATTERN = re.compile(r"(?<![\w#])#\w+")
 VIDEO_TIMESTAMP_PATTERN = re.compile(r"(?<![\d:])\d{1,2}:\d{2}(?::\d{2})?(?![\d:])")
 
 MENTION_PLACEHOLDER = "[User]"
-                                                                            
 MENTION_REPLACE_PATTERN = re.compile(r"(?<!\w)@[\w.\-]+(?:@[\w.\-]+)*")
 _TS = r"(?<![\d:.])\d{1,2}:\d{2}(?::\d{2})?(?!\d|:\d)(?!\s*(?:[ap]\.?m\b))"
 _TS_RANGE = _TS + r"(?:\s*(?:-|–|—|~|to)\s*" + _TS + r")?"
@@ -330,16 +328,14 @@ VIDEO_TIMESTAMP_REMOVAL = re.compile(
 
 INTENSIFIED_TAG = "[Intensified]"
 
-CAPS_MAX_SHARE = 0.10
+CAPS_WORD_MIN_ZIPF = 3.0
+CAPS_ACRONYM_SHARE = 0.5
 CAPS_MIN_EVIDENCE = 3
-CAPS_FALLBACK_MIN_ZIPF = 4.0
-CAPS_FALLBACK_MIN_LENGTH = 4
 
 ELONGATION_MIN_ZIPF = 2.0
-ELONGATION_MIN_GAIN = 2.0                                                             
+ELONGATION_MIN_GAIN = 2.0    
 WORD_TOKEN = re.compile(r"[^\W\d_]+(?:'[^\W\d_]+)?")
 ELONGATED_RUN = re.compile(r"([^\W\d_])\1{2,}")
-                                                                           
 BOLD_PATTERN = re.compile(r"(?<![\w*])\*{1,2}(?=\S)([^*\n]+?)(?<=\S)\*{1,2}(?![\w*])")
 ITALIC_PATTERN = re.compile(r"(?<![\w_])_(?=\S)([^_\n]+?)(?<=\S)_(?![\w_])")
 
@@ -363,9 +359,7 @@ FRAME_REGEX = {
 }
 CAPABILITY_QUALITY_REGEX = re.compile(CAPABILITY_QUALITY)
 CAPABILITY_WORK_OBJECT_REGEX = re.compile(CAPABILITY_WORK_OBJECT)
-                                                                     
 FRAMES_REQUIRING_AI = {"capability"}
-                                                                      
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
 SPAM_STRONG_REGEX = {k: re.compile(v) for k, v in SPAM_STRONG_PATTERNS.items()}
 SPAM_WEAK_REGEX = {k: re.compile(v) for k, v in SPAM_WEAK_PATTERNS.items()}
@@ -381,7 +375,7 @@ _SHARED = {}
 
 def url_extractor():
     if "url" not in _SHARED:
-        _SHARED["url"] = URLExtract()                                    
+        _SHARED["url"] = URLExtract()  
     return _SHARED["url"]
 
 def domain_extractor():
@@ -546,7 +540,6 @@ def clean_text(text):
 def matching_text(text_clean):
     text = ftfy.fixes.uncurl_quotes(text_clean)
     text = unicodedata.normalize("NFKC", text).casefold()
-                                                                  
     return "\n".join(" ".join(line.split()) for line in text.splitlines() if line.strip())
 
 def emoji_readable_name(character):
@@ -560,7 +553,6 @@ def emoji_readable_name(character):
         name = emoji.demojize(character, delimiters=("", ""), language=EMOJI_NAME_LANGUAGE)
 
     name = re.sub(r"[^\w]+", "_", name.strip()).strip("_").lower()
-                                                       
     if len(base) == 2 and all(0x1F1E6 <= ord(c) <= 0x1F1FF for c in base):
         return f"flag_{name}"
     return name
@@ -588,7 +580,7 @@ def emoji_to_text(text):
         if prefix:
             pad = "" if prefix.endswith((" ", "\n")) else " "
         else:
-            pad = " " if pieces else ""                                      
+            pad = " " if pieces else ""  
         pieces.append(f"{prefix}{pad}{label}")
         names.append(name)
         cursor = run_end
@@ -600,7 +592,7 @@ def emoji_to_text(text):
 
 @functools.lru_cache(maxsize=None)
 def find_urls(text):
-    if "." not in text:                                                       
+    if "." not in text:  
         return ()
     found = url_extractor().find_urls(text, get_indices=True)
     return tuple(item for item in found if is_plausible_url(item[0]))
@@ -612,7 +604,7 @@ def is_plausible_url(url):
     labels = host.split(".")
     if len(labels) < 2 or labels[-1][:1].isupper() or labels[-2].isdigit():
         return False
-    if rest:                                                 
+    if rest:  
         return True
 
     label, tld = labels[-2].lower(), labels[-1].lower()
@@ -627,6 +619,7 @@ def remove_urls(text):
     return text
 
 def build_caps_profile(texts):
+
     counts = {}
     for text in texts:
         for token in WORD_TOKEN.findall(strip_noise(text)):
@@ -636,27 +629,48 @@ def build_caps_profile(texts):
             counts[token.lower()] = (caps + token.isupper(), lower + token.islower(), total + 1)
     _SHARED["caps_profile"] = counts
 
+def vader_resources():
+    if "vader" not in _SHARED:
+        analyzer = vader.SentimentIntensityAnalyzer()
+        words = set(analyzer.lexicon) | set(vader.BOOSTER_DICT) | set(vader.NEGATE)
+        _SHARED["vader"] = {word.lower() for word in words}
+    return _SHARED["vader"]
+
+def is_mixed_case_comment(text):
+
+    words = vader.SentiText(text).words_and_emoticons
+    return bool(words) and vader.allcap_differential(words)
+
+def is_acronym(token):
+    caps, lower, total = _SHARED.get("caps_profile", {}).get(token.lower(), (0, 0, 0))
+    return total >= CAPS_MIN_EVIDENCE and caps / total > CAPS_ACRONYM_SHARE
+
 def is_emphatic_caps(token):
+
     if len(token) < 2 or not token.isupper():
         return False
-    caps, lower, total = _SHARED.get("caps_profile", {}).get(token.lower(), (0, 0, 0))
-    titled = total - caps - lower
-    if lower + titled >= CAPS_MIN_EVIDENCE:                                       
-
-        return caps / total <= CAPS_MAX_SHARE and lower >= titled
-    if caps >= CAPS_MIN_EVIDENCE:                                                    
+    word = token.lower().replace("'", "")
+    if word in vader_resources() or token.lower() in vader_resources():
+        return True
+    if len(token) < 3 or zipf_frequency(token.lower(), "en") < CAPS_WORD_MIN_ZIPF:
         return False
-    return (len(token) >= CAPS_FALLBACK_MIN_LENGTH
-            and zipf_frequency(token.lower(), "en") >= CAPS_FALLBACK_MIN_ZIPF)
+    caps, lower, total = _SHARED.get("caps_profile", {}).get(token.lower(), (0, 0, 0))
+    if total >= CAPS_MIN_EVIDENCE:
+        titled = total - caps - lower
+        if caps / total > CAPS_ACRONYM_SHARE:      
+            return False
+        if titled > lower and lower + titled >= CAPS_MIN_EVIDENCE:   
+            return False
+    return True
 
 def de_elongate(token):
     if not ELONGATED_RUN.search(token):
         return None
     lower = token.lower()
-    original_zipf = zipf_frequency(lower, "en")                           
+    original_zipf = zipf_frequency(lower, "en")      
     runs = list(ELONGATED_RUN.finditer(lower))[:4]
     best, best_zipf = None, 0.0
-    for keep in range(1 << len(runs)):                                            
+    for keep in range(1 << len(runs)):                
         pieces, cursor = [], 0
         for i, run in enumerate(runs):
             pieces.append(lower[cursor:run.start()])
@@ -671,9 +685,9 @@ def de_elongate(token):
         return best
     return None
 
-def mark_intensity(line):
-    def tag_formatted(match):
+def mark_intensity(line, caps_counts=True):
 
+    def tag_formatted(match):   
         content = match.group(1)
         body = content.rstrip(".,!?;:")
         return body + INTENSIFIED_TAG + content[len(body):]
@@ -681,58 +695,58 @@ def mark_intensity(line):
     line = BOLD_PATTERN.sub(tag_formatted, line)
     line = ITALIC_PATTERN.sub(tag_formatted, line)
 
-    tokens = [m for m in WORD_TOKEN.finditer(line) if m.group(0) != "User"]
-    flags, replacements = [], []
-    for match in tokens:
+    def replace(match):
         token = match.group(0)
+        if token == "User":                      
+            return token
         stretched = de_elongate(token)
-        caps = is_emphatic_caps(token if stretched is None else stretched.upper()
-                                if token.isupper() else token)
-        flags.append(caps or stretched is not None)
         if stretched is not None:
-            replacements.append(stretched)
-        elif caps:
-            replacements.append(token.lower())
-        else:
-            replacements.append(token)
+            return stretched + INTENSIFIED_TAG
+        if caps_counts and is_emphatic_caps(token):
+            return token.lower() + INTENSIFIED_TAG
+        return token
 
-    for i, match in enumerate(tokens):
-        token = match.group(0)
-        inside = 0 < i < len(tokens) - 1 and flags[i - 1] and flags[i + 1]
-        if len(token) == 1 and token.isupper() and inside:
-            flags[i], replacements[i] = True, token.lower()
-    for i, match in enumerate(tokens):
-        token = match.group(0)
-        if flags[i] and len(token) == 2 and token.isupper() and de_elongate(token) is None:
-            neighbour = (i > 0 and flags[i - 1]) or (i < len(tokens) - 1 and flags[i + 1])
-            if not neighbour and not line[match.end():match.end() + 1] == "!":
-                flags[i], replacements[i] = False, token
+    in_phrase = set()
+    if caps_counts:
+        tokens = list(WORD_TOKEN.finditer(line))
+        run = []
+        for index, match in enumerate(tokens + [None]):
+            is_caps = match is not None and match.group(0).isupper()
+            joined = (run and match is not None
+                      and re.fullmatch(r"[\s,'\-–—]*", line[tokens[run[-1]].end():match.start()]))
+            if is_caps and (not run or joined):
+                run.append(index)
+                continue
+            multi = [i for i in run if len(tokens[i].group(0)) >= 2]
+            if len(multi) >= 2:
+                in_phrase.update(tokens[i].start() for i in run)
+            run = [index] if is_caps else []
 
-    pieces, cursor = [], 0
-    for i, match in enumerate(tokens):
-        pieces.append(line[cursor:match.start()])
-        pieces.append(replacements[i])
-        span_ends = flags[i] and (i == len(tokens) - 1 or not flags[i + 1]
-                                  or re.search(r"[.!?\n]", line[match.end():tokens[i + 1].start()]))
-        if span_ends:
-            pieces.append(INTENSIFIED_TAG)
-        cursor = match.end()
-    pieces.append(line[cursor:])
-    result = "".join(pieces)
-    return re.sub(r"(" + re.escape(INTENSIFIED_TAG) + r")+", INTENSIFIED_TAG, result)
+    def replace_in_phrase(match):
+        token = match.group(0)
+        if match.start() not in in_phrase:
+            return replace(match)
+        if len(token) == 1:
+            return token.lower()
+        if is_acronym(token):
+            return token
+        return (de_elongate(token) or token.lower()) + INTENSIFIED_TAG
+
+    line = WORD_TOKEN.sub(replace_in_phrase, line)
+    return re.sub(r"(" + re.escape(INTENSIFIED_TAG) + r")+", INTENSIFIED_TAG, line)
 
 def analysis_text(text_normalized):
     text = remove_urls(text_normalized)
     text = VIDEO_TIMESTAMP_REMOVAL.sub(" ", text)
     text = MENTION_REPLACE_PATTERN.sub(f" {MENTION_PLACEHOLDER} ", text)
 
-    text = "\n".join(mark_intensity(line) for line in text.splitlines())
+    mixed_case = is_mixed_case_comment(text)
+    text = "\n".join(mark_intensity(line, caps_counts=mixed_case) for line in text.splitlines())
     text, _ = emoji_to_text(text)
     lines = []
     for line in text.splitlines():
         line = EMPTY_BRACKETS.sub(" ", line)
         line = " ".join(line.split())
-                                                                    
         line = re.sub(r"(\[User\]\s*)+", MENTION_PLACEHOLDER + " ", line).strip()
         line = SPACE_BEFORE_PUNCTUATION.sub(r"\1", line)
         line = re.sub(r"^[\s,;:\-–—]+", "", line)
@@ -799,7 +813,7 @@ def word_model_available(code):
     try:
         zipf_frequency("test", code)
         return True
-    except Exception:                                               
+    except Exception:  
         return False
 
 def corpus_language_priors(top_codes, token_counts):
@@ -905,7 +919,7 @@ def relevance_flags(text):
     ai_in_sentence = [bool(matched_terms(AI_REFERENCE_REGEX, x)) for x in sentences]
 
     found = {frame: [] for frame in FRAME_NAMES}
-    link = {frame: None for frame in FRAME_NAMES}                                  
+    link = {frame: None for frame in FRAME_NAMES}   
     for sentence, has_ai in zip(sentences, ai_in_sentence):
         persona = bool(persona_subject.search(sentence) and PERSONA_CREDENTIAL.search(sentence))
         for frame, (strong_regex, weak_regex) in FRAME_REGEX.items():
@@ -1060,6 +1074,9 @@ def run(args):
     build_caps_profile(table["text_normalized"].fillna(""))
     table["text_clean"] = table["text_normalized"].map(analysis_text).astype("string")
     table["intensified_count"] = table["text_clean"].str.count(re.escape(INTENSIFIED_TAG))
+    letters = table["text_normalized"].fillna("").map(
+        lambda t: "".join(ch for ch in strip_noise(t) if ch.isalpha()))
+    table["all_caps_comment"] = letters.str.len().ge(10) & letters.map(str.isupper)
     record("5b teks analisis", len(table), table,
            "URL dan timestamp video dihapus, mention -> [User], penekanan -> "
            "kata[Intensified], emoji -> nama library.",
@@ -1115,8 +1132,7 @@ def run(args):
     table["comment_type"] = table["is_reply"].map({False: "main", True: "reply"})
     table["thread_id"] = table["parent_id"].fillna(table["comment_id"]).astype("string")
     table["days_since_video_published"] = (
-        (table["published_at"] - video_published).dt.total_seconds() / 86400).round(3)
-                                                      
+        (table["published_at"] - video_published).dt.total_seconds() / 86400).round(3)  
     table["published_week_utc"] = (
         table["published_at"].dt.tz_convert(None).dt.to_period("W-SUN")
         .dt.start_time.dt.strftime("%Y-%m-%d").astype("string"))
@@ -1179,7 +1195,7 @@ def run(args):
         "published_at", "updated_at", "collected_at", "is_edited",
         "published_date_utc", "published_week_utc", "published_month_utc",
         "days_since_video_published", "like_count", "reported_reply_count",
-        "char_count", "word_count", "emoji_count", "emoji_names", "intensified_count", "has_url",
+        "char_count", "word_count", "emoji_count", "emoji_names", "intensified_count", "all_caps_comment", "has_url",
         "url_domains", "mention_count", "hashtags", "has_video_timestamp",
         "lang_label", "lang_detected", "lang_en_confidence", "lang_method",
         "lang_needs_review", "is_repeated_text", "duplicate_text_count",
@@ -1319,9 +1335,12 @@ def run(args):
             "text_clean: URL dihapus (urlextract), timestamp video dihapus "
             f"(pola: {VIDEO_TIMESTAMP_REMOVAL.pattern}), mention -> {MENTION_PLACEHOLDER}, "
             "emoji -> nama snake_case dari library emoji (deretan identik: 'nama xN')",
-            f"penekanan -> kata{INTENSIFIED_TAG}: *tebal*/_miring_, kata KAPITAL bukan "
-            f"akronim (porsi kapital di korpus <= {CAPS_MAX_SHARE}), huruf berulang "
-            "('soooo' -> 'so', via wordfreq); deretan kata ditekankan = satu penanda",
+            f"penekanan -> kata{INTENSIFIED_TAG} per kata: *tebal*/_miring_; kata KAPITAL "
+            "menurut aturan VADER (allcap_differential; leksikon, BOOSTER_DICT, NEGATE) "
+            f"diperluas ke kata Inggris umum (wordfreq Zipf >= {CAPS_WORD_MIN_ZIPF}) "
+            f"kecuali akronim (porsi kapital korpus > {CAPS_ACRONYM_SHARE}) dan nama diri; "
+            "huruf berulang ('soooo' -> 'so', via wordfreq). Komentar seluruhnya kapital: "
+            "kolom all_caps_comment",
             "kapital (selain penekanan), tanda baca, negasi, slang, hashtag dipertahankan",
         ],
     }
